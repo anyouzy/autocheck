@@ -1,13 +1,5 @@
 (function () {
-	if (window.location.search.includes('site=csfr') || window.location.search.includes('site=csde')) return;
-	window.onload = null;
-	document.addEventListener('DOMContentLoaded', (e) => {
-		let oScript = document.querySelector('script[src^="/js/autocheck.js"]');
-		oScript.setAttribute('defer', 'defer');
-		oScript.parentNode.removeChild(oScript);
-	});
-
-
+	
 	class AutoCheck {
 
 		constructor(oTitle, oSubscribers, originalCurrency) {
