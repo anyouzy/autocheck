@@ -1,3 +1,6 @@
+
+//version 2.1
+
 (function () {
 
 	window.onload = null;//待删除
