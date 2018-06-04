@@ -86,8 +86,8 @@
 					{
 						reward: [' reward', ' bonus', ' cashback', ' cash back', ' point', ' credit']
 					},
-					{
-						from: [' from ', ' start at ', ' starting at ', ' starts at', ' as low as ', ' as little as ', ' low to ', ' and up', ' & up']
+					{	// ' and up', ' & up' 待处理
+						from: [' from ', ' start at ', ' starting at ', ' starts at', ' as low as ', ' as little as ', ' low to ']
 					}
 				],
 				de: [],//待补充
