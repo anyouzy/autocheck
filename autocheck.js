@@ -333,6 +333,7 @@
 				typeArr.forEach((type) => {
 					let percentMatchRes = titleValueFragment.match(this.percentReg);
 					let { currencySymbol, amount } = this.getMoneyData(titleValueFragment);
+					let tmpType = '';
 					switch (type) {
 						case 'discount':
 							if (titleValueFragment.includes('/') || titleValueFragment.includes('%')) {
@@ -351,14 +352,14 @@
 							}
 							break;
 						case 'free':
-							let type = this.confirmFreeType(titleValueFragment);
-							if (type === 'money') {
+							tmpType = this.confirmFreeType(titleValueFragment);
+							if (tmpType === 'money') {
 								if (amount !== -1) {
 									offCurrencySymbol = currencySymbol;
 									amountArr.push(amount);
 								}
 							} else {
-								if (!freeTypeArr.includes(type)) freeTypeArr.push(type);
+								if (!freeTypeArr.includes(tmpType)) freeTypeArr.push(tmpType);
 							}
 							break;
 						case 'saleClearance':
