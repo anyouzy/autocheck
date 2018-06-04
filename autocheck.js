@@ -1,5 +1,5 @@
 
-//version 2.2
+//version 2.3
 
 (function () {
 
@@ -127,9 +127,8 @@
 		 * @return {String} [站点语言]
 		 */
 		getSiteLanguage() {
-			let queryString = window.location.search;
-			let index = queryString.indexOf('&site=cs') + '&site=cs'.length;
-			let site = queryString.substr(index, 2);
+			let reg = /site=cs(?<site>\w{2})/gi;
+			let site = reg.exec(window.location.search).groups.site;
 			let siteLanguage = '';
 			switch (site) {
 				case 'us':
@@ -287,9 +286,9 @@
 				return 'freeTrial';
 			} else if (null !== str.match(this.bngnRegWithFree[this.siteLanguage])) {
 				return 'bngn';
-			} else if(null !== str.match(this.moneyOffRegWithFree[this.siteLanguage])) {
+			} else if (null !== str.match(this.moneyOffRegWithFree[this.siteLanguage])) {
 				return 'money';
-			} 
+			}
 			else {
 				return 'freeGift';
 			}
@@ -317,8 +316,7 @@
 		 * @param  {Array}  targetArr            [目标数组]
 		 * @return {undefined}                    
 		 */
-		appendMoneyData(currencySymbolMatchRes=[],amountMatchRes=[],targetCurrencySymbol='',targetArr=[])
-		{
+		appendMoneyData(currencySymbolMatchRes = [], amountMatchRes = [], targetCurrencySymbol = '', targetArr = []) {
 			if (null !== currencySymbolMatchRes && null !== amountMatchRes) {
 				let { currencySymbol, amount } = this.getMoneyData(currencySymbolMatchRes, amountMatchRes);
 				targetCurrencySymbol = currencySymbol;
@@ -348,18 +346,18 @@
 								if (titleValueFragment.includes('/') || titleValueFragment.includes('%')) {
 									if (null !== percentMatchRes) percentArr.push(this.getPercentData(percentMatchRes[0]));
 								} else {
-									this.appendMoneyData(currencySymbolMatchRes,amountMatchRes,offCurrencySymbol,amountArr);
+									this.appendMoneyData(currencySymbolMatchRes, amountMatchRes, offCurrencySymbol, amountArr);
 								}
 								break;
 							case 'from':
-								this.appendMoneyData(currencySymbolMatchRes,amountMatchRes,fromCurrencySymbol,fromArr);
+								this.appendMoneyData(currencySymbolMatchRes, amountMatchRes, fromCurrencySymbol, fromArr);
 								break;
 							case 'free':
 								let type = this.confirmFreeType(titleValueFragment);
 								if (type === 'money') {
-									this.appendMoneyData(currencySymbolMatchRes,amountMatchRes,offCurrencySymbol,amountArr);
+									this.appendMoneyData(currencySymbolMatchRes, amountMatchRes, offCurrencySymbol, amountArr);
 								} else {
-									if(!freeTypeArr.includes(type)) freeTypeArr.push(type);
+									if (!freeTypeArr.includes(type)) freeTypeArr.push(type);
 								}
 								break;
 							case 'saleClearance':
