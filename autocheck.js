@@ -1,5 +1,5 @@
 
-//version 2.1
+//version 2.2
 
 (function () {
 
@@ -7,47 +7,47 @@
 
 	class AutoCheck {
 
-		constructor(oTitle, oSubscribers, originalCurrency, aScope, aState) {
+		constructor(oTitle, oSubscribers, defaultCurrencySymbol, aScope, aState) {
 			this.siteLanguage = this.getSiteLanguage();//站点语言
 			this.title = oTitle;//title DOM对象
 			this.scope = aScope;//scope DOM对象
 			this.state = aState;//scope DOM对象
-			this.scope[2].checked = true;//默认scope选择other
 			this.isSitewide = false;//记录当前sitewide状态
 			this.isInstore = false;//记录当前Instore状态
 			this.subscribers = {};//title input事件的订阅者
-			this.subscribe(oSubscribers);//添加订阅者
 			//常用连接符号
-			this.delimiter = [' + ', ', ', ' & ', ' plus '];
-			this.originalCurrency = originalCurrency;//最初货币符号
+			this.delimiter = [' + ', ', ', ' & ', ' plus ', '; '];
+			this.defaultCurrencySymbol = defaultCurrencySymbol;//页面最初货币符号
 			//特殊人群
 			this.specialCustomers = {
 				en: ['student', 'new customer'],
-				de: [],
-				fr: []
+				de: [],//待补充
+				fr: []//待补充
 			};
 			//邮寄,邮费关键词
 			this.shippingKeywords = {
 				en: [' shipping', ' delivery', ' p&p', ' postage', ' click and collect', ' click & collect', ' shipment', ' s&h', ' carriage', ' freight'],
-				de: [],
-				fr: []
+				de: [],//待补充
+				fr: []//待补充
 			};
 			//instore 关键词
 			this.instoreKeywords = {
 				en: ['in store', 'in-store', 'store only'],
-				de: [],
-				fr: []
+				de: [],//待补充
+				fr: []//待补充
 			};
-			//全场关键词
+			//全场关键词 
 			this.sitewideKeywords = {
 				en: [
 					'everything',
 					'any order',
 					'any purchase',
 					'any item',
+					'any one item',
 					'all orders',
 					'all products',
 					'all purchases',
+					'all the products',
 					'sitewide',
 					'site wide',
 					'site-wide',
@@ -65,8 +65,8 @@
 					'every order',
 					'every purchase'
 				],
-				de: [],
-				fr: []
+				de: [],//待补充
+				fr: []//待补充
 			};
 			//promoDetail关键词分类
 			this.promoDetailKeywords = {
@@ -75,7 +75,7 @@
 						discount: [' off', 'save ', ' discount', ' saving', ' savings']
 					},
 					{
-						free: ['free ', ' free', 'complimentary ']
+						free: ['free ', ' free', 'complimentary']
 					},
 					{
 						saleClearance: [' sale', ' sale ', ' clearance', 'clearance ', 'closeout ', ' closeout']
@@ -87,30 +87,38 @@
 						reward: [' reward', ' bonus', ' cashback', ' cash back', ' point', ' credit']
 					},
 					{
-						from: [' from ', ' start at ', ' starting at ', ' starts at', ' as low as ', ' as little as ', ' low to ']
+						from: [' from ', ' start at ', ' starting at ', ' starts at', ' as low as ', ' as little as ', ' low to ', ' and up', ' & up']
 					}
 				],
-				de: [],
-				fr: []
+				de: [],//待补充
+				fr: []//待补充
 			};
 			//货币符号正则
-			this.currencyReg = /(\$|€|£|Rs|RS\.|¥|₦|CHF|USD|CAD|GBP|POUND|RMB|AUD|INR|EUR|US\$|CA\$|AU\$)/gi;
+			this.currencySymbolReg = /(\$|€|£|Rs|RS\.|¥|₦|CHF|USD|CAD|GBP|POUND|RMB|AUD|INR|EUR|US\$|CA\$|AU\$)/gi;
 			//货币金额正则
 			this.amountReg = /((\d{1,3},){0,3}\d+(\.\d+)?)/gi;
 			this.percentReg = /((\d{1,2}(\.\d+)?%)|(\d{1,3}\/\d{1,3}))/gi;
-			//不含free的bngn正则(eg: 4 for 3)
-			this.bngnRegWithoutFree = {
+			//xx for xx 的bngn正则(eg: 4 for 3)
+			this.bngnRegWithFor = {
 				en: /\d+ for \d+/gi,
-				de: '',
-				fr: ''
+				de: null,//待补充
+				fr: null//待补充
 			};
-			//含有free的bngn正则(buy 2, get 1 free)
+			//buy xx, get xx free 的bngn正则(eg: buy 2, get 1 free)
 			this.bngnRegWithFree = {
 				en: /get (?:the )?\d+(?:.*?)(?:for )?free/gi,
-				de: '',
-				fr: ''
+				de: null,//待补充
+				fr: null,//待补充
 			};
-			this.promoDetailInfo = {};
+			//free money gift card的正则(eg:Free $10 Starbucks Gift Card)  
+			this.moneyOffRegWithFree = {
+				en: /(?:(?:free)|(?:complimentary))\s(?:.*?)(?:(?:gift cards?)|(?:gift vouchers?)|(?:gift certificates?)|(?:vouchers?)|(?:e-gift cards?)|(?:e-gift certificates?))/gi,
+				de: null,//待补充
+				fr: null,//待补充
+			};
+			this.promoDetailInfo = {}; //记录promo detail信息
+			this.scope[2].checked = true;//scope默认选择other
+			this.addSubscribers(oSubscribers);//添加订阅者
 			//构造函数里面直接执行exec方法，让CPQ添加促销时候，不用去改变title value，也能自动勾选promo detail
 			this.exec();
 		}
@@ -141,11 +149,11 @@
 			return siteLanguage;
 		}
 		/**
-		 * [subscribe 添加所有的checkbox DOM节点 到注册者]
+		 * [addSubscribers 注册所有的checkbox DOM节点 ]
 		 * @param  {Object} oSubscribers [所有的promodetail checkbox DOM节点]
 		 * @return {undefined}              
 		 */
-		subscribe(oSubscribers = {}) {
+		addSubscribers(oSubscribers = {}) {
 			oSubscribers.forEach((val) => {
 				let key = val.value;
 				switch (key) {
@@ -171,11 +179,11 @@
 			});
 		}
 		/**
-		 * [getCurrency 获取货币符号]
+		 * [getCurrencySymbol 获取货币符号]
 		 * @param  {String} currency [各种货币符号的表示]
 		 * @return {String}          [货币符号]
 		 */
-		getCurrency(currency = '') {
+		getCurrencySymbol(currency = '') {
 			switch (currency) {
 				case '$':
 				case 'usd':
@@ -226,12 +234,12 @@
 		}
 		/**
 		 * [getMoneyData 获取货币符号和金额]
-		 * @param  {String} currencyMatchRes [货币符号正则匹配结果]
+		 * @param  {String} currencySymbolMatchRes [货币符号正则匹配结果]
 		 * @param  {Array}  amountMatchRes   [金额正则匹配结果]
 		 * @return {Object}                  [货币符号和金额对象]
 		 */
-		getMoneyData(currencyMatchRes = '', amountMatchRes = []) {
-			let currency = this.getCurrency(currencyMatchRes[0]);
+		getMoneyData(currencySymbolMatchRes = '', amountMatchRes = []) {
+			let currencySymbol = this.getCurrencySymbol(currencySymbolMatchRes[0]);
 			let amount = 0;
 			if (amountMatchRes.length > 1) {
 				amount = Math.min(...amountMatchRes.map((v) => Number.parseFloat(v.replace(/,/g, ''))));
@@ -240,27 +248,27 @@
 			}
 
 			amount = Number.isInteger(amount) ? amount : amount.toFixed(2);
-			return { currency, amount };
+			return { currencySymbol, amount };
 		}
 		/**
 		 * [assignPromoDetailInfo 根据多个百分比取最大，多个money off取最大，多个from取最小，合并promodetail信息]
-		 * @param  {Array}  percentArr      [百分比数值数组]
-		 * @param  {Array}  amountArr       [money off类型的货币金额数组]
-		 * @param  {Array}  fromArr         [from类型的货币金额数组]
-		 * @param  {String} moneyCurrency   [money off类型的货币符号]
-		 * @param  {String} fromCurrency    [from类型的货币符号]
+		 * @param  {Array}  percentArr     	 		[百分比数值数组]
+		 * @param  {Array}  amountArr       		[money off类型的货币金额数组]
+		 * @param  {Array}  fromArr         		[from类型的货币金额数组]
+		 * @param  {String} offCurrencySymbol   	[money off类型的货币符号]
+		 * @param  {String} fromCurrencySymbol    	[from类型的货币符号]
 		 */
-		assignPromoDetailInfo(percentArr = [], amountArr = [], fromArr = [], moneyCurrency = '', fromCurrency = '') {
+		assignPromoDetailInfo(percentArr = [], amountArr = [], fromArr = [], offCurrencySymbol = '', fromCurrencySymbol = '') {
 			if (percentArr.length > 0) {
 				this.promoDetailInfo.percent = Math.max(...percentArr);
 			}
 
 			if (amountArr.length > 0) {
-				this.promoDetailInfo.money = { currency: moneyCurrency, amount: Math.max(...amountArr) };
+				this.promoDetailInfo.money = { currencySymbol: offCurrencySymbol, amount: Math.max(...amountArr) };
 			}
 
 			if (fromArr.length > 0) {
-				this.promoDetailInfo.from = { currency: fromCurrency, amount: Math.min(...fromArr) };
+				this.promoDetailInfo.from = { currencySymbol: fromCurrencySymbol, amount: Math.min(...fromArr) };
 			}
 		}
 		/**
@@ -279,7 +287,10 @@
 				return 'freeTrial';
 			} else if (null !== str.match(this.bngnRegWithFree[this.siteLanguage])) {
 				return 'bngn';
-			} else {
+			} else if(null !== str.match(this.moneyOffRegWithFree[this.siteLanguage])) {
+				return 'money';
+			} 
+			else {
 				return 'freeGift';
 			}
 		}
@@ -299,74 +310,78 @@
 			return typeArr;
 		}
 		/**
+		 * [appendMoneyData 追加money相关数据到对应数组]
+		 * @param  {Array}  currencySymbolMatchRes     [货币符号匹配结果]
+		 * @param  {Array}  amountMatchRes       [货币金额匹配结果]
+		 * @param  {String} targetCurrencySymbol [目标货币符号]
+		 * @param  {Array}  targetArr            [目标数组]
+		 * @return {undefined}                    
+		 */
+		appendMoneyData(currencySymbolMatchRes=[],amountMatchRes=[],targetCurrencySymbol='',targetArr=[])
+		{
+			if (null !== currencySymbolMatchRes && null !== amountMatchRes) {
+				let { currencySymbol, amount } = this.getMoneyData(currencySymbolMatchRes, amountMatchRes);
+				targetCurrencySymbol = currencySymbol;
+				targetArr.push(amount);
+			}
+		}
+		/**
 		 * [getSpecificPromoDetailInfo 遍历拆分后的多个标题片段，提取promo detail特征以及相应的数据信息]
 		 * @param  {Array}  splitArr          [被拆分了的标题字符串数组]
 		 */
 		getSpecificPromoDetailInfo(splitArr = []) {
-			let $ = this;
 			let percentArr = [];
 			let amountArr = [];
 			let fromArr = [];
 			let freeTypeArr = [];
-			let moneyCurrency = '';
-			let fromCurrency = '';
+			let offCurrencySymbol = '';
+			let fromCurrencySymbol = '';
 			splitArr.forEach((titleValueFragment) => {
-				let typeArr = $.getBasicPromoDetailType(titleValueFragment);
+				let typeArr = this.getBasicPromoDetailType(titleValueFragment);
 				if (typeArr.length > 0) {
 					typeArr.forEach((type) => {
-						let currencyMatchRes = titleValueFragment.match($.currencyReg);
-						let amountMatchRes = titleValueFragment.match($.amountReg);
-						let percentMatchRes = titleValueFragment.match($.percentReg);
+						let currencySymbolMatchRes = titleValueFragment.match(this.currencySymbolReg);
+						let amountMatchRes = titleValueFragment.match(this.amountReg);
+						let percentMatchRes = titleValueFragment.match(this.percentReg);
 						switch (type) {
 							case 'discount':
 								if (titleValueFragment.includes('/') || titleValueFragment.includes('%')) {
-									if (null !== percentMatchRes) {
-										percentArr.push($.getPercentData(percentMatchRes[0]));
-									}
+									if (null !== percentMatchRes) percentArr.push(this.getPercentData(percentMatchRes[0]));
 								} else {
-									if (null !== currencyMatchRes && null !== amountMatchRes) {
-										let { currency, amount } = $.getMoneyData(currencyMatchRes, amountMatchRes);
-										moneyCurrency = currency;
-										amountArr.push(amount);
-									}
+									this.appendMoneyData(currencySymbolMatchRes,amountMatchRes,offCurrencySymbol,amountArr);
 								}
 								break;
 							case 'from':
-
-								if (null !== currencyMatchRes && null !== amountMatchRes) {
-									let { currency, amount } = $.getMoneyData(currencyMatchRes, amountMatchRes);
-									fromCurrency = currency;
-									fromArr.push(amount);
-								}
+								this.appendMoneyData(currencySymbolMatchRes,amountMatchRes,fromCurrencySymbol,fromArr);
 								break;
 							case 'free':
-								if (!freeTypeArr.includes($.confirmFreeType(titleValueFragment))) {
-									freeTypeArr.push($.confirmFreeType(titleValueFragment));
+								let type = this.confirmFreeType(titleValueFragment);
+								if (type === 'money') {
+									this.appendMoneyData(currencySymbolMatchRes,amountMatchRes,offCurrencySymbol,amountArr);
+								} else {
+									if(!freeTypeArr.includes(type)) freeTypeArr.push(type);
 								}
 								break;
 							case 'saleClearance':
-								if ((!$.isSitewide) && (!titleValueFragment.includes('non sale'))) {
-									$.promoDetailInfo.saleClearance = true;
+								if ((!this.isSitewide) && (!titleValueFragment.includes('non sale'))) {
+									this.promoDetailInfo.saleClearance = true;
 								}
 								break;
 							default:
-								$.promoDetailInfo[type] = true;
+								this.promoDetailInfo[type] = true;
 								break;
 						}
 					});
 				} else {
-
-					if (null !== titleValueFragment.match($.bngnRegWithoutFree[$.siteLanguage])) {
-						$.promoDetailInfo.bngn = true;
+					if (null !== titleValueFragment.match(this.bngnRegWithFor[this.siteLanguage])) {
+						this.promoDetailInfo.bngn = true;
 					}
-
 				}
-
 			})
 			freeTypeArr.forEach((freeType) => {
 				this.promoDetailInfo[freeType] = true;
 			});
-			$.assignPromoDetailInfo(percentArr, amountArr, fromArr, moneyCurrency, fromCurrency);
+			this.assignPromoDetailInfo(percentArr, amountArr, fromArr, offCurrencySymbol, fromCurrencySymbol);
 		}
 		/**
 		 * [floatToString 浮点数转字符串，以便最终放入相应的DOM]
@@ -385,16 +400,15 @@
 		 * @return {undefined}               
 		 */
 		updateDOM() {
-			let $ = this;
-			Object.keys($.subscribers).forEach((key) => {
-				let domNode = $.subscribers[key];
-				if ($.promoDetailInfo.hasOwnProperty(key)) {
+			Object.keys(this.subscribers).forEach((key) => {
+				let domNode = this.subscribers[key];
+				if (this.promoDetailInfo.hasOwnProperty(key)) {
 					domNode.selfNode.checked = true;
 					if (domNode.relatedNodes.length === 1) {
-						domNode.relatedNodes[0].value = $.floatToString($.promoDetailInfo[key]);
+						domNode.relatedNodes[0].value = this.floatToString(this.promoDetailInfo[key]);
 					} else if (domNode.relatedNodes.length === 2) {
-						domNode.relatedNodes[0].value = $.promoDetailInfo[key].currency;
-						domNode.relatedNodes[1].value = $.floatToString($.promoDetailInfo[key].amount);
+						domNode.relatedNodes[0].value = this.promoDetailInfo[key].currencySymbol;
+						domNode.relatedNodes[1].value = this.floatToString(this.promoDetailInfo[key].amount);
 					}
 				}
 				else {
@@ -402,7 +416,7 @@
 					if (domNode.relatedNodes.length === 1) {
 						domNode.relatedNodes[0].value = '';
 					} else if (domNode.relatedNodes.length === 2) {
-						domNode.relatedNodes[0].value = $.originalCurrency;
+						domNode.relatedNodes[0].value = this.defaultCurrencySymbol;
 						domNode.relatedNodes[1].value = '';
 					}
 				}
@@ -478,9 +492,9 @@
 	let aState = document.querySelectorAll("input[name='onlinestate[]']");
 	let oTitle = document.querySelector('#title');
 	let aCheckboxes = document.querySelectorAll('#PromotionDetail > div > p > span > input[type=checkbox]');
-	let originalCurrency = document.querySelector("[name='money_type[money]']").value;
+	let defaultCurrencySymbol = document.querySelector("[name='money_type[money]']").value;
 
-	let autoCheck = new AutoCheck(oTitle, aCheckboxes, originalCurrency, aScope, aState);
+	let autoCheck = new AutoCheck(oTitle, aCheckboxes, defaultCurrencySymbol, aScope, aState);
 	autoCheck.bindEvent();
 
 })();
