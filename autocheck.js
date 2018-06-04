@@ -1,5 +1,5 @@
 
-//version 2.3
+//version 2.4
 
 (function () {
 
@@ -16,25 +16,25 @@
 			this.isInstore = false;//记录当前Instore状态
 			this.subscribers = {};//title input事件的订阅者
 			//常用连接符号
-			this.delimiter = [' + ', ', ', ' & ', ' plus ', '; '];
+			this.delimiter = [' + ', ', ', ' & ', ' plus ', '; ',];
 			this.defaultCurrencySymbol = defaultCurrencySymbol;//页面最初货币符号
 			//特殊人群
 			this.specialCustomers = {
 				en: ['student', 'new customer'],
 				de: [],//待补充
-				fr: []//待补充
+				fr: [],//待补充
 			};
 			//邮寄,邮费关键词
 			this.shippingKeywords = {
 				en: [' shipping', ' delivery', ' p&p', ' postage', ' click and collect', ' click & collect', ' shipment', ' s&h', ' carriage', ' freight'],
 				de: [],//待补充
-				fr: []//待补充
+				fr: [],//待补充
 			};
 			//instore 关键词
 			this.instoreKeywords = {
 				en: ['in store', 'in-store', 'store only'],
 				de: [],//待补充
-				fr: []//待补充
+				fr: [],//待补充
 			};
 			//全场关键词 
 			this.sitewideKeywords = {
@@ -63,10 +63,10 @@
 					'entire site',
 					'whole site',
 					'every order',
-					'every purchase'
+					'every purchase',
 				],
 				de: [],//待补充
-				fr: []//待补充
+				fr: [],//待补充
 			};
 			//promoDetail关键词分类
 			this.promoDetailKeywords = {
@@ -88,10 +88,10 @@
 					},
 					{	// ' and up', ' & up' 待处理
 						from: [' from ', ' start at ', ' starting at ', ' starts at', ' as low as ', ' as little as ', ' low to ']
-					}
+					},
 				],
 				de: [],//待补充
-				fr: []//待补充
+				fr: [],//待补充
 			};
 			//money正则
 			this.moneyReg = /((?<startSymbol>\$|€|£|Rs|RS\.|¥|₦|CHF|USD|CAD|GBP|POUND|RMB|AUD|INR|EUR|US\$|CA\$|AU\$)\s?(?<endAmount>(\d{1,3},){0,3}\d+(\.\d+)?))|((?<startAmount>(\d{1,3},){0,3}\d+(\.\d+)?)\s?(?<endSymbol>\$|€|£|Rs|RS\.|¥|₦|CHF|USD|CAD|GBP|POUND|RMB|AUD|INR|EUR|US\$|CA\$|AU\$))/gi;
@@ -246,11 +246,11 @@
 			}
 			if (amountMatchRes.length > 1) {
 				amount = Math.min(...amountMatchRes.map((v) => Number.parseFloat(v.replace(/,/g, ''))));
-			} else if(amountMatchRes.length === 1){
+			} else if (amountMatchRes.length === 1) {
 				amount = Number.parseFloat(amountMatchRes[0].replace(/,/g, ''));
 			}
 			amount = Number.isInteger(amount) ? amount : amount.toFixed(2);
-			return {currencySymbol, amount};
+			return { currencySymbol, amount };
 		}
 		/**
 		 * [assignPromoDetailInfo 根据多个百分比取最大，多个money off取最大，多个from取最小，合并promodetail信息]
@@ -291,8 +291,7 @@
 				return 'bngn';
 			} else if (null !== str.match(this.moneyOffRegWithFree[this.siteLanguage])) {
 				return 'money';
-			}
-			else {
+			} else {
 				return 'freeGift';
 			}
 		}
@@ -322,61 +321,61 @@
 			let freeTypeArr = [];
 			let offCurrencySymbol = '';
 			let fromCurrencySymbol = '';
+
 			splitArr.forEach((titleValueFragment) => {
 				let typeArr = this.getBasicPromoDetailType(titleValueFragment);
-				if (typeArr.length > 0) {
-					typeArr.forEach((type) => {
-						let percentMatchRes = titleValueFragment.match(this.percentReg);
-						let { currencySymbol, amount } = this.getMoneyData(titleValueFragment);
-						switch (type) {
-							case 'discount':
-								if (titleValueFragment.includes('/') || titleValueFragment.includes('%')) {
-									if (null !== percentMatchRes) percentArr.push(this.getPercentData(percentMatchRes[0]));
-								} else {
-									if (amount !== -1) {
-										offCurrencySymbol = currencySymbol;
-										amountArr.push(amount);
-									}
-								}
-								break;
-							case 'from':
-								if (amount !== -1) {
-									fromCurrencySymbol = currencySymbol;
-									fromArr.push(amount);
-								}
-								break;
-							case 'free':
-								let type = this.confirmFreeType(titleValueFragment);
-								if (type === 'money') {
-									if (amount !== -1) {
-										offCurrencySymbol = currencySymbol;
-										amountArr.push(amount);
-									}
-								} else {
-									if (!freeTypeArr.includes(type)) freeTypeArr.push(type);
-								}
-								break;
-							case 'saleClearance':
-								if ((!this.isSitewide) && (!titleValueFragment.includes('non sale'))) {
-									this.promoDetailInfo.saleClearance = true;
-								}
-								break;
-							default:
-								this.promoDetailInfo[type] = true;
-								break;
-						}
-					});
-				} else {
+				if (typeArr.length === 0) {
 					if (null !== titleValueFragment.match(this.bngnRegWithFor[this.siteLanguage])) {
 						this.promoDetailInfo.bngn = true;
 					}
+					return;
 				}
-			})
-
-			freeTypeArr.forEach((freeType) => {
-				this.promoDetailInfo[freeType] = true;
+				typeArr.forEach((type) => {
+					let percentMatchRes = titleValueFragment.match(this.percentReg);
+					let { currencySymbol, amount } = this.getMoneyData(titleValueFragment);
+					switch (type) {
+						case 'discount':
+							if (titleValueFragment.includes('/') || titleValueFragment.includes('%')) {
+								if (null !== percentMatchRes) percentArr.push(this.getPercentData(percentMatchRes[0]));
+							} else {
+								if (amount !== -1) {
+									offCurrencySymbol = currencySymbol;
+									amountArr.push(amount);
+								}
+							}
+							break;
+						case 'from':
+							if (amount !== -1) {
+								fromCurrencySymbol = currencySymbol;
+								fromArr.push(amount);
+							}
+							break;
+						case 'free':
+							let type = this.confirmFreeType(titleValueFragment);
+							if (type === 'money') {
+								if (amount !== -1) {
+									offCurrencySymbol = currencySymbol;
+									amountArr.push(amount);
+								}
+							} else {
+								if (!freeTypeArr.includes(type)) freeTypeArr.push(type);
+							}
+							break;
+						case 'saleClearance':
+							if ((!this.isSitewide) && (!titleValueFragment.includes('non sale'))) {
+								this.promoDetailInfo.saleClearance = true;
+							}
+							break;
+						default:
+							this.promoDetailInfo[type] = true;
+							break;
+					}
+				});
+				freeTypeArr.forEach((freeType) => {
+					this.promoDetailInfo[freeType] = true;
+				});
+				this.assignPromoDetailInfo(percentArr, amountArr, fromArr, offCurrencySymbol, fromCurrencySymbol);
 			});
-			this.assignPromoDetailInfo(percentArr, amountArr, fromArr, offCurrencySymbol, fromCurrencySymbol);
 		}
 		/**
 		 * [floatToString 浮点数转字符串，以便最终放入相应的DOM]
