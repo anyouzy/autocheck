@@ -93,10 +93,9 @@
 				de: [],//待补充
 				fr: []//待补充
 			};
-			//货币符号正则
-			this.currencySymbolReg = /(\$|€|£|Rs|RS\.|¥|₦|CHF|USD|CAD|GBP|POUND|RMB|AUD|INR|EUR|US\$|CA\$|AU\$)/gi;
-			//货币金额正则
-			this.amountReg = /((\d{1,3},){0,3}\d+(\.\d+)?)/gi;
+			//money正则
+			this.moneyReg = /((?<startSymbol>\$|€|£|Rs|RS\.|¥|₦|CHF|USD|CAD|GBP|POUND|RMB|AUD|INR|EUR|US\$|CA\$|AU\$)\s?(?<endAmount>(\d{1,3},){0,3}\d+(\.\d+)?))|((?<startAmount>(\d{1,3},){0,3}\d+(\.\d+)?)\s?(?<endSymbol>\$|€|£|Rs|RS\.|¥|₦|CHF|USD|CAD|GBP|POUND|RMB|AUD|INR|EUR|US\$|CA\$|AU\$))/gi;
+			//percent off 正则
 			this.percentReg = /((\d{1,2}(\.\d+)?%)|(\d{1,3}\/\d{1,3}))/gi;
 			//xx for xx 的bngn正则(eg: 4 for 3)
 			this.bngnRegWithFor = {
@@ -233,21 +232,25 @@
 		}
 		/**
 		 * [getMoneyData 获取货币符号和金额]
-		 * @param  {String} currencySymbolMatchRes [货币符号正则匹配结果]
-		 * @param  {Array}  amountMatchRes   [金额正则匹配结果]
 		 * @return {Object}                  [货币符号和金额对象]
 		 */
-		getMoneyData(currencySymbolMatchRes = '', amountMatchRes = []) {
-			let currencySymbol = this.getCurrencySymbol(currencySymbolMatchRes[0]);
-			let amount = 0;
+		getMoneyData(titleValueFragment) {
+			let moneyMatchRes = null;
+			let amount = -1;
+			let currencySymbol = '';
+			let amountMatchRes = [];
+			while (null !== (moneyMatchRes = this.moneyReg.exec(titleValueFragment))) {
+				let groups = moneyMatchRes.groups;
+				currencySymbol = this.getCurrencySymbol(groups.startSymbol || groups.endSymbol);
+				amountMatchRes.push(groups.endAmount || groups.startAmount);
+			}
 			if (amountMatchRes.length > 1) {
 				amount = Math.min(...amountMatchRes.map((v) => Number.parseFloat(v.replace(/,/g, ''))));
-			} else {
+			} else if(amountMatchRes.length === 1){
 				amount = Number.parseFloat(amountMatchRes[0].replace(/,/g, ''));
 			}
-
 			amount = Number.isInteger(amount) ? amount : amount.toFixed(2);
-			return { currencySymbol, amount };
+			return {currencySymbol, amount};
 		}
 		/**
 		 * [assignPromoDetailInfo 根据多个百分比取最大，多个money off取最大，多个from取最小，合并promodetail信息]
@@ -309,21 +312,6 @@
 			return typeArr;
 		}
 		/**
-		 * [appendMoneyData 追加money相关数据到对应数组]
-		 * @param  {Array}  currencySymbolMatchRes     [货币符号匹配结果]
-		 * @param  {Array}  amountMatchRes       [货币金额匹配结果]
-		 * @param  {String} targetCurrencySymbol [目标货币符号]
-		 * @param  {Array}  targetArr            [目标数组]
-		 * @return {undefined}                    
-		 */
-		appendMoneyData(currencySymbolMatchRes = [], amountMatchRes = [], targetCurrencySymbol = '', targetArr = []) {
-			if (null !== currencySymbolMatchRes && null !== amountMatchRes) {
-				let { currencySymbol, amount } = this.getMoneyData(currencySymbolMatchRes, amountMatchRes);
-				targetCurrencySymbol = currencySymbol;
-				targetArr.push(amount);
-			}
-		}
-		/**
 		 * [getSpecificPromoDetailInfo 遍历拆分后的多个标题片段，提取promo detail特征以及相应的数据信息]
 		 * @param  {Array}  splitArr          [被拆分了的标题字符串数组]
 		 */
@@ -338,24 +326,32 @@
 				let typeArr = this.getBasicPromoDetailType(titleValueFragment);
 				if (typeArr.length > 0) {
 					typeArr.forEach((type) => {
-						let currencySymbolMatchRes = titleValueFragment.match(this.currencySymbolReg);
-						let amountMatchRes = titleValueFragment.match(this.amountReg);
 						let percentMatchRes = titleValueFragment.match(this.percentReg);
+						let { currencySymbol, amount } = this.getMoneyData(titleValueFragment);
 						switch (type) {
 							case 'discount':
 								if (titleValueFragment.includes('/') || titleValueFragment.includes('%')) {
 									if (null !== percentMatchRes) percentArr.push(this.getPercentData(percentMatchRes[0]));
 								} else {
-									this.appendMoneyData(currencySymbolMatchRes, amountMatchRes, offCurrencySymbol, amountArr);
+									if (amount !== -1) {
+										offCurrencySymbol = currencySymbol;
+										amountArr.push(amount);
+									}
 								}
 								break;
 							case 'from':
-								this.appendMoneyData(currencySymbolMatchRes, amountMatchRes, fromCurrencySymbol, fromArr);
+								if (amount !== -1) {
+									fromCurrencySymbol = currencySymbol;
+									fromArr.push(amount);
+								}
 								break;
 							case 'free':
 								let type = this.confirmFreeType(titleValueFragment);
 								if (type === 'money') {
-									this.appendMoneyData(currencySymbolMatchRes, amountMatchRes, offCurrencySymbol, amountArr);
+									if (amount !== -1) {
+										offCurrencySymbol = currencySymbol;
+										amountArr.push(amount);
+									}
 								} else {
 									if (!freeTypeArr.includes(type)) freeTypeArr.push(type);
 								}
@@ -376,6 +372,7 @@
 					}
 				}
 			})
+
 			freeTypeArr.forEach((freeType) => {
 				this.promoDetailInfo[freeType] = true;
 			});
