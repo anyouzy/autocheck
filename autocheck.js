@@ -148,10 +148,10 @@
 		}
 		/**
 		 * [addSubscribers 注册所有的checkbox DOM节点 ]
-		 * @param  {Object} oSubscribers [所有的promodetail checkbox DOM节点]
+		 * @param  {Array} oSubscribers [所有的promodetail checkbox DOM节点]
 		 * @return {undefined}              
 		 */
-		addSubscribers(oSubscribers = {}) {
+		addSubscribers(oSubscribers = []) {
 			oSubscribers.forEach((val) => {
 				let key = val.value;
 				switch (key) {
