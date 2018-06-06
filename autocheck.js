@@ -99,7 +99,7 @@
 			this.percentReg = /((\d{1,2}(\.\d+)?%)|(\d{1,3}\/\d{1,3}))/gi;
 			//xx for xx 的bngn正则(eg: 4 for 3)
 			this.bngnRegWithFor = {
-				en: /\d+ for \d+/gi,
+				en: /(?:^|\s)\d+ for \d+/gi,
 				de: null,//待补充
 				fr: null//待补充
 			};
