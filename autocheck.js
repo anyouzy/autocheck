@@ -3,8 +3,6 @@
 
 (function () {
 
-	window.onload = null;//待删除
-
 	class AutoCheck {
 
 		constructor(oTitle, oSubscribers, defaultCurrencySymbol, aScope, aState) {
